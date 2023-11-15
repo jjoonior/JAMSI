@@ -1,6 +1,7 @@
 import {
   HttpException,
   HttpStatus,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -9,6 +10,8 @@ import { UserEntity } from '../users/user.entity';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { Cache } from 'cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +19,7 @@ export class AuthService {
     @InjectRepository(UserEntity)
     private readonly userEntityRepository: Repository<UserEntity>,
     private readonly jwtService: JwtService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async duplicationCheckNickname(nickname: string) {
@@ -50,6 +54,12 @@ export class AuthService {
     });
   }
 
+  async storeToken(id: string, accessToken: string, refreshToken: string) {
+    const token = { accessToken, refreshToken };
+    const key = `token:${id}`;
+    await this.cacheManager.set(key, token, 3600);
+  }
+
   async signup(
     nickname: string,
     email: string,
@@ -79,6 +89,8 @@ export class AuthService {
     const accessToken = this.signToken(newUser, false);
     const refreshToken = this.signToken(newUser, true);
 
+    await this.storeToken(newUser.id, accessToken, refreshToken);
+
     return { accessToken, refreshToken };
   }
 
@@ -97,6 +109,8 @@ export class AuthService {
 
     const accessToken = this.signToken(user, false);
     const refreshToken = this.signToken(user, true);
+
+    await this.storeToken(user.id, accessToken, refreshToken);
 
     return { accessToken, refreshToken };
   }
