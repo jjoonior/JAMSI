@@ -1,11 +1,6 @@
 import { Body, Controller, Get, Param, Post, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
-const cookieOptions = {
-  httpOnly: true,
-  secure: true,
-};
-
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -29,16 +24,14 @@ export class AuthController {
     @Body('code') code: number,
     @Res({ passthrough: true }) res,
   ) {
-    const { accessToken, refreshToken } = await this.authService.signup(
+    return await this.authService.signup(
+      res,
       nickname,
       email,
       password,
       language,
       code,
     );
-
-    res.cookie('accessToken', accessToken, cookieOptions);
-    res.cookie('refreshToken', refreshToken, cookieOptions);
   }
 
   @Post('login')
@@ -47,12 +40,6 @@ export class AuthController {
     @Body('password') password: string,
     @Res({ passthrough: true }) res,
   ) {
-    const { accessToken, refreshToken } = await this.authService.login(
-      email,
-      password,
-    );
-
-    res.cookie('accessToken', accessToken, cookieOptions);
-    res.cookie('refreshToken', refreshToken, cookieOptions);
+    return await this.authService.login(res, email, password);
   }
 }
