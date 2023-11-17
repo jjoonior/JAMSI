@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import * as nodemailer from 'nodemailer';
 
 const cookieOptions = {
   httpOnly: true,
@@ -20,12 +21,22 @@ const cookieOptions = {
 
 @Injectable()
 export class AuthService {
+  private transporter: nodemailer.Transporter;
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly userEntityRepository: Repository<UserEntity>,
     private readonly jwtService: JwtService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-  ) {}
+  ) {
+    this.transporter = nodemailer.createTransport({
+      service: process.env.MAIL_SERVICE,
+      auth: {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASSWORD,
+      },
+    });
+  }
 
   async duplicationCheckNickname(nickname: string) {
     if (!!(await this.userEntityRepository.findOneBy({ nickname }))) {
@@ -45,24 +56,57 @@ export class AuthService {
     }
   }
 
+  private generateVerificationCode(): string {
+    return (Math.floor(Math.random() * 900000) + 100000).toString();
+  }
+
+  async sendEmailCode(email: string) {
+    const code = this.generateVerificationCode();
+
+    const key = `emailCode:${email}`;
+    await this.cacheManager.set(
+      key,
+      code,
+      Number(process.env.MAIL_CODE_EXPIRE),
+    );
+
+    const mailOptions = {
+      from: process.env.MAIL_USER,
+      to: email,
+      subject: '[JAMSI] 인증 코드',
+      text: `인증코드: ${code}`,
+    };
+    this.transporter.sendMail(mailOptions);
+  }
+
+  async verifyEmailCode(email: string, code: string) {
+    const key = `emailCode:${email}`;
+    const storedCode = await this.cacheManager.get(key);
+    if (storedCode !== code) {
+      throw new HttpException(
+        '인증코드가 일치하지 않습니다.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
   async signup(
     res,
     nickname: string,
     email: string,
     password: string,
     language: number,
-    code: number,
+    code: string,
   ) {
     const salt = await bcrypt.genSalt();
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // todo language enum 처리
 
-    // todo 이메일 인증코드 재확인
-
-    // 중복체크
+    // todo 중복체크 로직 동시성 처리 필요
     await this.duplicationCheckNickname(nickname);
     await this.duplicationCheckEmail(email);
+    await this.verifyEmailCode(email, code);
 
     const newUserObject = await this.userEntityRepository.create({
       nickname,
@@ -100,11 +144,11 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_SECRET,
-      expiresIn: process.env.JWT_ACCESS_EXPIRE,
+      expiresIn: Number(process.env.JWT_ACCESS_EXPIRE),
     });
     const refreshToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_SECRET,
-      expiresIn: process.env.JWT_REFRESH_EXPIRE,
+      expiresIn: Number(process.env.JWT_REFRESH_EXPIRE),
     });
 
     res.cookie('accessToken', accessToken, cookieOptions);
