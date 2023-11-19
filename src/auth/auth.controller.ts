@@ -1,18 +1,34 @@
-import { Body, Controller, Get, Param, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Get('duplication-check/nickname/:nickname')
-  async duplicationCheckNickname(@Param('nickname') nickname: string) {
-    return this.authService.duplicationCheckNickname(nickname);
+  @Get('duplication-check')
+  async duplicationCheck(
+    @Query('nickname') nickname: string,
+    @Query('email') email: string,
+  ) {
+    if (!!nickname) {
+      await this.authService.duplicationCheckNickname(nickname);
+    }
+    if (!!email) {
+      await this.authService.duplicationCheckEmail(email);
+    }
   }
 
-  @Get('duplication-check/email/:email')
-  async duplicationCheckEmail(@Param('email') email: string) {
-    return this.authService.duplicationCheckEmail(email);
+  @Get('send-code')
+  async sendEmailCode(@Query('email') email: string) {
+    this.authService.sendEmailCode(email);
+  }
+
+  @Post('verify-code')
+  async verifyEmailCode(
+    @Body('email') email: string,
+    @Body('code') code: string,
+  ) {
+    await this.authService.verifyEmailCode(email, code);
   }
 
   @Post('signup')
@@ -21,7 +37,7 @@ export class AuthController {
     @Body('email') email: string,
     @Body('password') password: string,
     @Body('language') language: number,
-    @Body('code') code: number,
+    @Body('code') code: string,
     @Res({ passthrough: true }) res,
   ) {
     return await this.authService.signup(
