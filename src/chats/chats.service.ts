@@ -12,7 +12,7 @@ export class ChatsService {
 
   async getRoomList(userId: string) {
     return await this.roomEntity.findAndCount({
-      where: { user: { id: userId } },
+      where: { users: { id: userId } },
     });
   }
 }
