@@ -8,8 +8,8 @@ export class ChatsController {
   constructor(private readonly chatsService: ChatsService) {}
 
   @Get()
-  async getRoomList(@Req() req) {
-    console.log(req.user);
-    return await this.chatsService.getRoomList();
+  async getRoomList(@Req() { user }) {
+    const [roomList, roomCount] = await this.chatsService.getRoomList(user.id);
+    return { roomList, roomCount };
   }
 }

@@ -10,7 +10,9 @@ export class ChatsService {
     private readonly roomEntity: Repository<RoomEntity>,
   ) {}
 
-  async getRoomList() {
-    return await this.roomEntity.find();
+  async getRoomList(userId: string) {
+    return await this.roomEntity.findAndCount({
+      where: { user: { id: userId } },
+    });
   }
 }
