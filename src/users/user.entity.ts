@@ -3,14 +3,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
-  Unique,
   UpdateDateColumn,
 } from 'typeorm';
+import { RoomEntity } from '../chats/room.entity';
 
 @Entity('user')
-@Unique(['email'])
-@Unique(['nickname'])
 export class UserEntity extends BaseEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -18,6 +17,7 @@ export class UserEntity extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 255,
+    unique: true,
   })
   email: string;
 
@@ -30,6 +30,7 @@ export class UserEntity extends BaseEntity {
   @Column({
     type: 'varchar',
     length: 255,
+    unique: true,
   })
   nickname: string;
 
@@ -43,4 +44,7 @@ export class UserEntity extends BaseEntity {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @OneToMany(() => RoomEntity, (room) => room.user)
+  rooms: RoomEntity[];
 }

@@ -203,4 +203,8 @@ export class AuthService {
       throw new UnauthorizedException('유효하지 않은 토큰입니다.');
     }
   }
+
+  async getUserByPayload(payload): Promise<UserEntity> {
+    return await this.userEntityRepository.findOneBy({ id: payload.id });
+  }
 }

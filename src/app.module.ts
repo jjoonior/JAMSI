@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from './users/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { ChatsModule } from './chats/chats.module';
 import * as redisStore from 'cache-manager-redis-store';
 
 @Module({
@@ -22,7 +23,7 @@ import * as redisStore from 'cache-manager-redis-store';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
-      entities: [UserEntity],
+      entities: [__dirname + '/**/*.entity.{js,ts}'],
       // 개발환경은 true
       synchronize: true,
     }),
@@ -33,6 +34,7 @@ import * as redisStore from 'cache-manager-redis-store';
       host: process.env.REDIS_HOST,
       port: process.env.REDIS_PORT,
     }),
+    ChatsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -3,8 +3,10 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  NotFoundException,
 } from '@nestjs/common';
 import { AuthService } from '../auth.service';
+import { UserEntity } from '../../users/user.entity';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -36,11 +38,11 @@ export class AuthGuard implements CanActivate {
       }
     }
 
-    req.user = {
-      id: payload.id,
-      email: payload.email,
-      language: payload.language,
-    };
+    const user: UserEntity = await this.authService.getUserByPayload(payload);
+    if (!user) {
+      throw new NotFoundException('존재하지 않는 사용자입니다.');
+    }
+    req.user = user;
 
     return true;
   }
