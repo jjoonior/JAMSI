@@ -3,8 +3,8 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  JoinColumn,
-  ManyToOne,
+  JoinTable,
+  ManyToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -15,9 +15,9 @@ export class RoomEntity extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => UserEntity, (user) => user.rooms)
-  @JoinColumn()
-  user: UserEntity;
+  @ManyToMany(() => UserEntity, (user) => user.rooms)
+  @JoinTable()
+  users: UserEntity[];
 
   @Column({
     type: 'varchar',
