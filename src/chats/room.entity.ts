@@ -5,10 +5,12 @@ import {
   Entity,
   JoinTable,
   ManyToMany,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { UserEntity } from '../users/user.entity';
+import { ChatEntity } from './chat.entity';
 
 @Entity('room')
 export class RoomEntity extends BaseEntity {
@@ -19,9 +21,14 @@ export class RoomEntity extends BaseEntity {
   @JoinTable()
   users: UserEntity[];
 
+  @OneToMany(() => ChatEntity, (chat) => chat.room)
+  chats: ChatEntity[];
+
   @Column({
     type: 'varchar',
     length: 255,
+    nullable: true,
+    default: '참여자 없음',
   })
   title: string;
 
