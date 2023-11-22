@@ -9,7 +9,9 @@ export class ChatsController {
 
   @Get()
   async getRoomList(@Req() { user }) {
-    const [roomList, roomCount] = await this.chatsService.getRoomList(user.id);
+    const [roomList, roomCount] = await this.chatsService.getRoomListByUserId(
+      user.id,
+    );
     return { roomList, roomCount };
   }
 }
