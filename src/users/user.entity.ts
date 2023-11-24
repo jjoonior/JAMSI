@@ -9,7 +9,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { RoomEntity } from '../chats/room.entity';
-import { ChatEntity } from '../chats/chat.entity';
+import { MessageEntity } from '../chats/message.entity';
 
 @Entity('user')
 export class UserEntity extends BaseEntity {
@@ -50,6 +50,6 @@ export class UserEntity extends BaseEntity {
   @ManyToMany(() => RoomEntity, (room) => room.users)
   rooms: RoomEntity[];
 
-  @OneToMany(() => ChatEntity, (chat) => chat.user)
-  chats: ChatEntity[];
+  @OneToMany(() => MessageEntity, (message) => message.user)
+  messages: MessageEntity[];
 }

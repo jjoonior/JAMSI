@@ -10,7 +10,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { UserEntity } from '../users/user.entity';
-import { ChatEntity } from './chat.entity';
+import { MessageEntity } from './message.entity';
 
 @Entity('room')
 export class RoomEntity extends BaseEntity {
@@ -21,8 +21,8 @@ export class RoomEntity extends BaseEntity {
   @JoinTable()
   users: UserEntity[];
 
-  @OneToMany(() => ChatEntity, (chat) => chat.room)
-  chats: ChatEntity[];
+  @OneToMany(() => MessageEntity, (message) => message.room)
+  messages: MessageEntity[];
 
   @Column({
     type: 'varchar',

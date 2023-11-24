@@ -11,16 +11,16 @@ import {
 import { UserEntity } from '../users/user.entity';
 import { RoomEntity } from './room.entity';
 
-@Entity('chat')
-export class ChatEntity extends BaseEntity {
+@Entity('message')
+export class MessageEntity extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => UserEntity, (user) => user.chats)
+  @ManyToOne(() => UserEntity, (user) => user.messages)
   @JoinColumn()
   user: UserEntity;
 
-  @ManyToOne(() => RoomEntity, (room) => room.chats)
+  @ManyToOne(() => RoomEntity, (room) => room.messages)
   @JoinColumn()
   room: RoomEntity;
 
@@ -28,7 +28,7 @@ export class ChatEntity extends BaseEntity {
     type: 'varchar',
     length: 255,
   })
-  message: string;
+  content: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
