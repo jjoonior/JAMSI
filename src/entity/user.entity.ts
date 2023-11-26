@@ -3,11 +3,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ManyToMany,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { RoomEntity } from '../chats/room.entity';
+import { RoomEntity } from './room.entity';
+import { MessageEntity } from './message.entity';
 
 @Entity('user')
 export class UserEntity extends BaseEntity {
@@ -45,6 +47,9 @@ export class UserEntity extends BaseEntity {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @OneToMany(() => RoomEntity, (room) => room.user)
+  @ManyToMany(() => RoomEntity, (room) => room.users)
   rooms: RoomEntity[];
+
+  @OneToMany(() => MessageEntity, (message) => message.user)
+  messages: MessageEntity[];
 }

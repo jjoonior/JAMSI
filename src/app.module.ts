@@ -3,7 +3,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserEntity } from './users/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ChatsModule } from './chats/chats.module';
@@ -15,7 +14,6 @@ import * as redisStore from 'cache-manager-redis-store';
       envFilePath: '.env',
       isGlobal: true,
     }),
-    TypeOrmModule.forFeature([UserEntity]),
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.DB_HOST,

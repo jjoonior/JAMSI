@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuthService } from '../auth.service';
-import { UserEntity } from '../../users/user.entity';
+import { UserEntity } from '../../entity/user.entity';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
