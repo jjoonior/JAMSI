@@ -23,7 +23,7 @@ export class ChatsGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Server;
 
-  async handleConnection(socket: Socket): Promise<any> {
+  async handleConnection(socket): Promise<any> {
     try {
       const { cookie } = socket.handshake.headers;
 
@@ -33,8 +33,9 @@ export class ChatsGateway implements OnGatewayConnection {
 
       const accessToken = cookie.split(';')[0].trim().split('=')[1];
       const payload = this.authService.verifyToken(accessToken);
+      socket.user = await this.authService.getUserByPayload(payload);
 
-      socket['user'] = await this.authService.getUserByPayload(payload);
+      await this.chatsService.addUserSocket(socket.user.id, socket.id);
     } catch (e) {
       socket.emit('disconnected', '유효하지 않은 토큰입니다.');
       socket.disconnect();
