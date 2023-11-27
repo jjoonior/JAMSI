@@ -8,11 +8,11 @@ import { UserEntity } from '../entity/user.entity';
 export class ChatsService {
   constructor(
     @InjectRepository(RoomEntity)
-    private readonly roomEntity: Repository<RoomEntity>,
+    private readonly roomEntityRepository: Repository<RoomEntity>,
   ) {}
 
   async getRoomListByUserId(userId: string) {
-    return await this.roomEntity.findAndCount({
+    return await this.roomEntityRepository.findAndCount({
       where: { users: { id: userId } },
     });
   }
@@ -29,7 +29,7 @@ export class ChatsService {
   }
 
   async createRoom(user: UserEntity) {
-    return await this.roomEntity
+    return await this.roomEntityRepository
       .create({
         users: [user],
       })
@@ -49,5 +49,26 @@ export class ChatsService {
     }
 
     inChatUserMap[roomId][socket.user.id].push(socket.id);
+  }
+
+  async getRoomById(roomId: number) {
+    return await this.roomEntityRepository.findOne({
+      where: { id: roomId },
+      relations: { users: true },
+    });
+  }
+
+  async addRoomUser(room: RoomEntity, user: UserEntity) {
+    const exist = room.users.some((roomUser) => roomUser.id === user.id);
+    if (!exist) {
+      room.users.push(user);
+    }
+    return this.roomEntityRepository.save(room);
+  }
+
+  async updateRoomTitle(room: RoomEntity) {
+    const users = room.users.map((user) => user.nickname);
+    room.title = Array.from(new Set(users)).join(', ');
+    return this.roomEntityRepository.save(room);
   }
 }
