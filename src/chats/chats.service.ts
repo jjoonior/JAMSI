@@ -48,7 +48,10 @@ export class ChatsService {
       inChatUserMap[roomId][socket.user.id] = [];
     }
 
-    inChatUserMap[roomId][socket.user.id].push(socket.id);
+    const userSocketList = inChatUserMap[roomId][socket.user.id];
+    if (!userSocketList.some((socketId) => socketId === socket.id)) {
+      inChatUserMap[roomId][socket.user.id].push(socket.id);
+    }
   }
 
   async delInChatUser(inChatUserMap, socket, roomId) {
