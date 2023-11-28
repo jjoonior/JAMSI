@@ -45,10 +45,27 @@ export class ChatsService {
     }
 
     if (!(socket.user.id in inChatUserMap[roomId])) {
-      inChatUserMap[roomId][socket.user.id] = [];
+      inChatUserMap[roomId][socket.user.id] = new Set();
     }
 
-    inChatUserMap[roomId][socket.user.id].push(socket.id);
+    inChatUserMap[roomId][socket.user.id].add(socket.id);
+  }
+
+  async delInChatUser(inChatUserMap, socket, roomId) {
+    if (!(roomId in inChatUserMap)) {
+      return;
+    }
+
+    if (!(socket.user.id in inChatUserMap[roomId])) {
+      return;
+    }
+
+    const userSocketList = inChatUserMap[roomId][socket.user.id];
+    userSocketList.delete(socket.id);
+
+    if (userSocketList.size === 0) {
+      delete inChatUserMap[roomId][socket.user.id];
+    }
   }
 
   async getRoomById(roomId: number) {
@@ -58,11 +75,20 @@ export class ChatsService {
     });
   }
 
+  async isExistRoomUser(room: RoomEntity, user: UserEntity) {
+    return room.users.some((roomUser) => roomUser.id === user.id);
+  }
+
   async addRoomUser(room: RoomEntity, user: UserEntity) {
-    const exist = room.users.some((roomUser) => roomUser.id === user.id);
+    const exist = await this.isExistRoomUser(room, user);
     if (!exist) {
       room.users.push(user);
     }
+    return this.roomEntityRepository.save(room);
+  }
+
+  async delRoomUser(room: RoomEntity, user: UserEntity) {
+    room.users = room.users.filter((roomUser) => roomUser.id !== user.id);
     return this.roomEntityRepository.save(room);
   }
 
