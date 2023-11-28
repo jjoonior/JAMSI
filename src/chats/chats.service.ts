@@ -51,6 +51,16 @@ export class ChatsService {
     inChatUserMap[roomId][socket.user.id].push(socket.id);
   }
 
+  async delInChatUser(inChatUserMap, socket, roomId) {
+    if (!(roomId in inChatUserMap)) {
+      return;
+    }
+
+    if (socket.user.id in inChatUserMap[roomId]) {
+      delete inChatUserMap[roomId][socket.user.id];
+    }
+  }
+
   async getRoomById(roomId: number) {
     return await this.roomEntityRepository.findOne({
       where: { id: roomId },
@@ -63,6 +73,11 @@ export class ChatsService {
     if (!exist) {
       room.users.push(user);
     }
+    return this.roomEntityRepository.save(room);
+  }
+
+  async delRoomUser(room: RoomEntity, user: UserEntity) {
+    room.users = room.users.filter((roomUser) => roomUser.id !== user.id);
     return this.roomEntityRepository.save(room);
   }
 
