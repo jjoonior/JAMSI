@@ -166,6 +166,10 @@ export class ChatsGateway implements OnGatewayConnection {
     });
   }
 
+  /**
+   * 채팅방 입장 처리 (inChatUser 등록)
+   * 채팅방 정보와 이전 채팅 내역 emit
+   */
   @SubscribeMessage('on')
   async onChat(
     @MessageBody() dto: { roomId: number },
@@ -196,5 +200,31 @@ export class ChatsGateway implements OnGatewayConnection {
       messages,
     };
     socket.emit('on', data);
+  }
+
+  /**
+   * 채팅방 off 처리 (inChatUser 삭제)
+   * 따로 emit할 정보 없음
+   */
+  @SubscribeMessage('off')
+  async offChat(
+    @MessageBody() dto: { roomId: number },
+    @ConnectedSocket() socket,
+  ) {
+    const room = await this.chatsService.getRoomById(dto.roomId);
+    if (!room) {
+      throw new WsException('존재하지 않는 채팅방입니다.');
+    }
+
+    const exist = await this.chatsService.isExistRoomUser(room, socket.user);
+    if (!exist) {
+      throw new WsException('채팅방을 찾을 수 없습니다.');
+    }
+
+    await this.chatsService.delInChatUser(this.inChatUserMap, socket, room.id);
+    console.log(this.inChatUserMap);
+
+    // const data = {};
+    // socket.emit('off', data);
   }
 }
