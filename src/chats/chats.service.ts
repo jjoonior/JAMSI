@@ -59,7 +59,19 @@ export class ChatsService {
       return;
     }
 
-    if (socket.user.id in inChatUserMap[roomId]) {
+    if (!(socket.user.id in inChatUserMap[roomId])) {
+      return;
+    }
+
+    const userSocketList = inChatUserMap[roomId][socket.user.id];
+    for (let i = 0; i < userSocketList.length; i++) {
+      if (userSocketList[i] === socket.id) {
+        userSocketList.splice(i, 1);
+        i--;
+      }
+    }
+
+    if (userSocketList.length === 0) {
       delete inChatUserMap[roomId][socket.user.id];
     }
   }
