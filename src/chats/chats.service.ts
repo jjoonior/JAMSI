@@ -45,13 +45,10 @@ export class ChatsService {
     }
 
     if (!(socket.user.id in inChatUserMap[roomId])) {
-      inChatUserMap[roomId][socket.user.id] = [];
+      inChatUserMap[roomId][socket.user.id] = new Set();
     }
 
-    const userSocketList = inChatUserMap[roomId][socket.user.id];
-    if (!userSocketList.some((socketId) => socketId === socket.id)) {
-      inChatUserMap[roomId][socket.user.id].push(socket.id);
-    }
+    inChatUserMap[roomId][socket.user.id].add(socket.id);
   }
 
   async delInChatUser(inChatUserMap, socket, roomId) {
@@ -64,14 +61,9 @@ export class ChatsService {
     }
 
     const userSocketList = inChatUserMap[roomId][socket.user.id];
-    for (let i = 0; i < userSocketList.length; i++) {
-      if (userSocketList[i] === socket.id) {
-        userSocketList.splice(i, 1);
-        i--;
-      }
-    }
+    userSocketList.delete(socket.id);
 
-    if (userSocketList.length === 0) {
+    if (userSocketList.size === 0) {
       delete inChatUserMap[roomId][socket.user.id];
     }
   }
