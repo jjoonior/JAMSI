@@ -222,9 +222,31 @@ export class ChatsGateway implements OnGatewayConnection {
     }
 
     await this.chatsService.delInChatUser(this.inChatUserMap, socket, room.id);
-    console.log(this.inChatUserMap);
 
     // const data = {};
     // socket.emit('off', data);
+  }
+
+  /**
+   * 유저가 참여중인 채팅방 리스트 조회
+   * 조회시 채팅방마다 참여중인 유저 리스트와 마지막 메시지 내용 및 시간을 가져옴
+   * 해당 room에 join 안된 소켓은 join
+   * 채팅방 개수와 채팅방 리스트 emit
+   */
+  @SubscribeMessage('rooms')
+  async getRoomList(@ConnectedSocket() socket: Socket) {
+    // todo 채팅방마다 마지막 메시지 내용과 시간도 같이 조회
+    const [roomList, roomCount] = await this.chatsService.getRoomListByUserId(
+      socket['user'].id,
+    );
+
+    roomList.forEach((room: any) => {
+      if (!socket.rooms.has(room.id.toString())) {
+        socket.join(room.id.toString());
+      }
+    });
+
+    const data = { roomCount, roomList };
+    socket.emit('rooms', data);
   }
 }

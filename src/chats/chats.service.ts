@@ -13,6 +13,15 @@ export class ChatsService {
 
   async getRoomListByUserId(userId: string) {
     return await this.roomEntityRepository.findAndCount({
+      select: {
+        id: true,
+        title: true,
+        users: {
+          id: true,
+          nickname: true,
+        },
+      },
+      relations: { users: true },
       where: { users: { id: userId } },
     });
   }
