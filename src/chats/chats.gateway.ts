@@ -30,7 +30,7 @@ export class ChatsGateway implements OnGatewayConnection {
     try {
       const { cookie } = socket.handshake.headers;
       if (!cookie) {
-        throw new WsException('토근이 존재하지 않습니다.');
+        throw new WsException('토큰이 존재하지 않습니다.');
       }
 
       const accessToken = cookie.split(';')[0].trim().split('=')[1];
@@ -248,5 +248,39 @@ export class ChatsGateway implements OnGatewayConnection {
 
     const data = { roomCount, roomList };
     socket.emit('rooms', data);
+  }
+
+  @SubscribeMessage('message')
+  async onMessage(
+    @MessageBody() dto: { roomId: number; content: string },
+    @ConnectedSocket() socket,
+  ) {
+    const room = await this.chatsService.getRoomById(dto.roomId);
+    if (!room) {
+      throw new WsException('존재하지 않는 채팅방입니다.');
+    }
+
+    const exist = await this.chatsService.isExistRoomUser(room, socket.user);
+    if (!exist) {
+      throw new WsException('채팅방을 찾을 수 없습니다.');
+    }
+
+    const message = await this.chatsService.createMessage(
+      socket.user,
+      room,
+      dto.content,
+    );
+
+    const data = {
+      roomId: room.id,
+      userId: socket.user.id,
+      userNickname: socket.user.nickname,
+      messageId: message.id,
+      content: message.content,
+      createdAt: message.createdAt,
+    };
+
+    // todo 번역 기능 추가 시 유저별 언어로 번역 후 유저 소켓마다 emit해야함
+    this.server.in(room.id.toString()).emit('message', data);
   }
 }

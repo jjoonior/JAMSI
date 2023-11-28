@@ -3,12 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { RoomEntity } from '../entity/room.entity';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../entity/user.entity';
+import { MessageEntity } from '../entity/message.entity';
 
 @Injectable()
 export class ChatsService {
   constructor(
     @InjectRepository(RoomEntity)
     private readonly roomEntityRepository: Repository<RoomEntity>,
+    @InjectRepository(MessageEntity)
+    private readonly messageEntityRepository: Repository<MessageEntity>,
   ) {}
 
   async getRoomListByUserId(userId: string) {
@@ -105,5 +108,16 @@ export class ChatsService {
     const users = room.users.map((user) => user.nickname);
     room.title = Array.from(new Set(users)).join(', ');
     return this.roomEntityRepository.save(room);
+  }
+
+  // todo 언어 컬럼 추가 / 번역본 저장 테이블 OneToMany
+  async createMessage(user: UserEntity, room: RoomEntity, content: string) {
+    return this.messageEntityRepository
+      .create({
+        user,
+        room,
+        content,
+      })
+      .save();
   }
 }
