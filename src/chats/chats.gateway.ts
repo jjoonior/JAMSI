@@ -77,10 +77,11 @@ export class ChatsGateway implements OnGatewayConnection {
    * 채팅방 입장 처리
    * 최근 채팅 내역 조회
    *  참여 전 채팅에 대한 번역은 x, 유저 언어에 해당하는 번역본이 있을떄만 반환
-   * 유저 이름을 추가하여 채팅방 유저이 나열된 title로 수정
+   * 유저 이름을 추가하여 채팅방 유저 이름이 나열된 title로 수정
    * 채팅방 참여자 목록 반환
    * 유저 모든 소켓이 해당 방을 join
-   * 모든 소켓에 해당 방을 join했다고 위 반환 정보와 함꼐 알림
+   * 현재 유저의 모든 소켓에 해당 방을 join했다고 위 반환 정보와 함꼐 알림
+   * 채팅방의 다른 유저들에게도 입장을 알려야함 (유저 수 변동)
    */
   @SubscribeMessage('join')
   async joinRoom(
@@ -95,11 +96,7 @@ export class ChatsGateway implements OnGatewayConnection {
 
     await this.chatsService.addRoomUser(room, socket.user);
 
-    await this.chatsService.addInChatUser(
-      this.inChatUserMap,
-      socket,
-      dto.roomId,
-    );
+    await this.chatsService.addInChatUser(this.inChatUserMap, socket, room.id);
 
     // todo 이전 채팅 내역 조회
     const messages = [];
@@ -107,8 +104,15 @@ export class ChatsGateway implements OnGatewayConnection {
     // todo 마지막에 한번만 save하면 트랜잭션 처리로 볼 수 있곘는데
     await this.chatsService.updateRoomTitle(room);
 
-    const result = {
-      info: '채팅방에 참여했습니다.',
+    const userSockets = this.userSocketMap[socket.user.id];
+    userSockets.forEach((socketId) => {
+      const s = this.server.sockets.get(socketId);
+      s.join(room.id.toString());
+    });
+
+    // todo 채팅방의 다른 유저들에게도 입장을 알려야함 (유저 수 변동)
+    const data = {
+      info: `${socket.user.nickname}님이 들어왔습니다.`,
       id: room.id,
       title: room.title,
       users: room.users.map((user) => ({
@@ -117,12 +121,6 @@ export class ChatsGateway implements OnGatewayConnection {
       })),
       messages,
     };
-
-    const userSockets = this.userSocketMap[socket.user.id];
-    userSockets.forEach((socketId) => {
-      const s = this.server.sockets.get(socketId);
-      s.join(dto.roomId.toString());
-      s.emit('join', result);
-    });
+    this.server.in(room.id.toString()).emit('join', data);
   }
 }
