@@ -29,7 +29,6 @@ export class ChatsGateway implements OnGatewayConnection {
   async handleConnection(socket): Promise<any> {
     try {
       const { cookie } = socket.handshake.headers;
-
       if (!cookie) {
         throw new WsException('토근이 존재하지 않습니다.');
       }
@@ -89,7 +88,6 @@ export class ChatsGateway implements OnGatewayConnection {
     @ConnectedSocket() socket,
   ) {
     const room = await this.chatsService.getRoomById(dto.roomId);
-
     if (!room) {
       throw new WsException('존재하지 않는 채팅방입니다.');
     }
@@ -139,7 +137,6 @@ export class ChatsGateway implements OnGatewayConnection {
     @ConnectedSocket() socket,
   ) {
     const room = await this.chatsService.getRoomById(dto.roomId);
-
     if (!room) {
       throw new WsException('존재하지 않는 채팅방입니다.');
     }
@@ -167,5 +164,37 @@ export class ChatsGateway implements OnGatewayConnection {
       const s = this.server.sockets.get(socketId);
       s.leave(room.id.toString());
     });
+  }
+
+  @SubscribeMessage('on')
+  async onChat(
+    @MessageBody() dto: { roomId: number },
+    @ConnectedSocket() socket,
+  ) {
+    const room = await this.chatsService.getRoomById(dto.roomId);
+    if (!room) {
+      throw new WsException('존재하지 않는 채팅방입니다.');
+    }
+
+    const exist = await this.chatsService.isExistRoomUser(room, socket.user);
+    if (!exist) {
+      throw new WsException('채팅방을 찾을 수 없습니다.');
+    }
+
+    await this.chatsService.addInChatUser(this.inChatUserMap, socket, room.id);
+
+    // todo 이전 채팅 내역 조회
+    const messages = [];
+
+    const data = {
+      id: room.id,
+      title: room.title,
+      users: room.users.map((user) => ({
+        id: user.id,
+        nickname: user.nickname,
+      })),
+      messages,
+    };
+    socket.emit('on', data);
   }
 }

@@ -68,8 +68,12 @@ export class ChatsService {
     });
   }
 
+  async isExistRoomUser(room: RoomEntity, user: UserEntity) {
+    return room.users.some((roomUser) => roomUser.id === user.id);
+  }
+
   async addRoomUser(room: RoomEntity, user: UserEntity) {
-    const exist = room.users.some((roomUser) => roomUser.id === user.id);
+    const exist = await this.isExistRoomUser(room, user);
     if (!exist) {
       room.users.push(user);
     }
