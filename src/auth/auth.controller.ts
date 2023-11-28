@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { Language } from '../entity/enum/language.enum';
 
 @Controller('auth')
 export class AuthController {
@@ -36,7 +37,7 @@ export class AuthController {
     @Body('nickname') nickname: string,
     @Body('email') email: string,
     @Body('password') password: string,
-    @Body('language') language: number,
+    @Body('language') language: Language,
     @Body('code') code: string,
     @Res({ passthrough: true }) res,
   ) {
