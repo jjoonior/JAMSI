@@ -10,6 +10,7 @@ import {
 import { Namespace, Socket } from 'socket.io';
 import { ChatsService } from './chats.service';
 import { AuthService } from '../auth/auth.service';
+import { EventName } from '../entity/enum/eventName.enum';
 
 @WebSocketGateway({
   namespace: 'chats',
@@ -53,7 +54,7 @@ export class ChatsGateway implements OnGatewayConnection {
    * 유저의 모든 소켓(다른 기기)은 새로 만든 채팅방을 join
    * 모든 소켓에게 채팅방 생성을 알림
    */
-  @SubscribeMessage('create_room')
+  @SubscribeMessage(EventName.CREATE)
   async createRoom(@ConnectedSocket() socket) {
     const newRoom = await this.chatsService.createRoom(socket.user);
 
@@ -67,7 +68,7 @@ export class ChatsGateway implements OnGatewayConnection {
     userSockets.forEach((socketId) => {
       const s = this.server.sockets.get(socketId);
       s.join(newRoom.id.toString());
-      s.emit('create_room', '새로운 채팅방이 생성되었습니다.');
+      s.emit(EventName.CREATE, '새로운 채팅방이 생성되었습니다.');
     });
   }
 
@@ -82,7 +83,7 @@ export class ChatsGateway implements OnGatewayConnection {
    * 현재 유저의 모든 소켓에 해당 방을 join했다고 위 반환 정보와 함꼐 알림
    * 채팅방의 다른 유저들에게도 입장을 알려야함 (유저 수 변동)
    */
-  @SubscribeMessage('join')
+  @SubscribeMessage(EventName.JOIN)
   async joinRoom(
     @MessageBody() dto: { roomId: number },
     @ConnectedSocket() socket,
@@ -119,7 +120,7 @@ export class ChatsGateway implements OnGatewayConnection {
       })),
       messages,
     };
-    this.server.in(room.id.toString()).emit('join', data);
+    this.server.in(room.id.toString()).emit(EventName.JOIN, data);
   }
 
   /**
@@ -131,7 +132,7 @@ export class ChatsGateway implements OnGatewayConnection {
    * 모든 소켓에 해당 방을 leave했다고 위 반환 정보와 함꼐 알림
    * 다른 유저들에게 유저 퇴장과 바뀐 참여자 수 알림
    */
-  @SubscribeMessage('leave')
+  @SubscribeMessage(EventName.LEAVE)
   async leaveRoom(
     @MessageBody() dto: { roomId: number },
     @ConnectedSocket() socket,
@@ -157,7 +158,7 @@ export class ChatsGateway implements OnGatewayConnection {
         nickname: user.nickname,
       })),
     };
-    this.server.in(room.id.toString()).emit('leave', data);
+    this.server.in(room.id.toString()).emit(EventName.LEAVE, data);
 
     const userSockets = this.userSocketMap[socket.user.id];
     userSockets.forEach((socketId) => {
@@ -170,7 +171,7 @@ export class ChatsGateway implements OnGatewayConnection {
    * 채팅방 입장 처리 (inChatUser 등록)
    * 채팅방 정보와 이전 채팅 내역 emit
    */
-  @SubscribeMessage('on')
+  @SubscribeMessage(EventName.ON)
   async onChat(
     @MessageBody() dto: { roomId: number },
     @ConnectedSocket() socket,
@@ -199,14 +200,14 @@ export class ChatsGateway implements OnGatewayConnection {
       })),
       messages,
     };
-    socket.emit('on', data);
+    socket.emit(EventName.ON, data);
   }
 
   /**
    * 채팅방 off 처리 (inChatUser 삭제)
    * 따로 emit할 정보 없음
    */
-  @SubscribeMessage('off')
+  @SubscribeMessage(EventName.OFF)
   async offChat(
     @MessageBody() dto: { roomId: number },
     @ConnectedSocket() socket,
@@ -224,7 +225,7 @@ export class ChatsGateway implements OnGatewayConnection {
     await this.chatsService.delInChatUser(this.inChatUserMap, socket, room.id);
 
     // const data = {};
-    // socket.emit('off', data);
+    // socket.emit(EventName.OFF, data);
   }
 
   /**
@@ -233,7 +234,7 @@ export class ChatsGateway implements OnGatewayConnection {
    * 해당 room에 join 안된 소켓은 join
    * 채팅방 개수와 채팅방 리스트 emit
    */
-  @SubscribeMessage('rooms')
+  @SubscribeMessage(EventName.ROOMS)
   async getRoomList(@ConnectedSocket() socket: Socket) {
     // todo 채팅방마다 마지막 메시지 내용과 시간도 같이 조회
     const [roomList, roomCount] = await this.chatsService.getRoomListByUserId(
@@ -247,10 +248,10 @@ export class ChatsGateway implements OnGatewayConnection {
     });
 
     const data = { roomCount, roomList };
-    socket.emit('rooms', data);
+    socket.emit(EventName.ROOMS, data);
   }
 
-  @SubscribeMessage('message')
+  @SubscribeMessage(EventName.MESSAGE)
   async onMessage(
     @MessageBody() dto: { roomId: number; content: string },
     @ConnectedSocket() socket,
@@ -281,6 +282,6 @@ export class ChatsGateway implements OnGatewayConnection {
     };
 
     // todo 번역 기능 추가 시 유저별 언어로 번역 후 유저 소켓마다 emit해야함
-    this.server.in(room.id.toString()).emit('message', data);
+    this.server.in(room.id.toString()).emit(EventName.MESSAGE, data);
   }
 }
