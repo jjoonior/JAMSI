@@ -11,6 +11,7 @@ import { Namespace, Socket } from 'socket.io';
 import { ChatsService } from './chats.service';
 import { AuthService } from '../auth/auth.service';
 import { EventName } from '../entity/enum/eventName.enum';
+import { TranslationService } from '../translation/translation.service';
 
 @WebSocketGateway({
   namespace: 'chats',
@@ -25,6 +26,7 @@ export class ChatsGateway implements OnGatewayConnection {
   constructor(
     private readonly authService: AuthService,
     private readonly chatsService: ChatsService,
+    private readonly translationService: TranslationService,
   ) {}
 
   async handleConnection(socket): Promise<any> {
@@ -272,16 +274,32 @@ export class ChatsGateway implements OnGatewayConnection {
       dto.content,
     );
 
-    const data = {
-      roomId: room.id,
-      userId: socket.user.id,
-      userNickname: socket.user.nickname,
-      messageId: message.id,
-      content: message.content,
-      createdAt: message.createdAt,
-    };
+    const languages = await this.translationService.getRoomUserLanguage(room);
+    const translatedMessageMap =
+      await this.translationService.getTranslatedMessage(message, languages);
 
-    // todo 번역 기능 추가 시 유저별 언어로 번역 후 유저 소켓마다 emit해야함
-    this.server.in(room.id.toString()).emit(EventName.MESSAGE, data);
+    room.users.forEach((user) => {
+      const data = {
+        roomId: room.id,
+        userId: socket.user.id,
+        userNickname: socket.user.nickname,
+        messageId: message.id,
+        message: {
+          languages: message.language,
+          content: message.content,
+        },
+        translatedMessage: {
+          language: user.language,
+          content: translatedMessageMap.get(user.language) || message.content,
+        },
+        createdAt: message.createdAt,
+      };
+
+      const userSockets = this.userSocketMap[user.id] || [];
+      userSockets.forEach((socketId) => {
+        const s = this.server.sockets.get(socketId);
+        s.emit(EventName.MESSAGE, data);
+      });
+    });
   }
 }

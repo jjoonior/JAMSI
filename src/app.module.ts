@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ChatsModule } from './chats/chats.module';
+import { TranslationModule } from './translation/translation.module';
 import * as redisStore from 'cache-manager-redis-store';
 
 @Module({
@@ -33,6 +34,7 @@ import * as redisStore from 'cache-manager-redis-store';
       port: process.env.REDIS_PORT,
     }),
     ChatsModule,
+    TranslationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
