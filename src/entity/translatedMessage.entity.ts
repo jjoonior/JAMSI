@@ -1,4 +1,5 @@
 import {
+  BaseEntity,
   Column,
   CreateDateColumn,
   Entity,
@@ -11,7 +12,7 @@ import { MessageEntity } from './message.entity';
 import { Language } from './enum/language.enum';
 
 @Entity('translated_message')
-export class TranslatedMessageEntity {
+export class TranslatedMessageEntity extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
