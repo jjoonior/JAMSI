@@ -5,7 +5,7 @@ export enum EventName {
   ON = 'on',
   OFF = 'off',
   ROOMS = 'rooms',
-  MESSAGE = 'MESSAGE',
+  MESSAGE = 'message',
   HISTORY = 'history',
   EXCEPTION = 'exception',
 }
