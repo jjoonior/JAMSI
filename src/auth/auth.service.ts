@@ -13,6 +13,7 @@ import * as bcrypt from 'bcrypt';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as nodemailer from 'nodemailer';
+import { Language } from '../entity/enum/language.enum';
 
 const cookieOptions = {
   httpOnly: true,
@@ -95,7 +96,7 @@ export class AuthService {
     nickname: string,
     email: string,
     password: string,
-    language: number,
+    language: Language,
     code: string,
   ) {
     const salt = await bcrypt.genSalt();

@@ -5,33 +5,20 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { UserEntity } from './user.entity';
-import { RoomEntity } from './room.entity';
-import { TranslatedMessageEntity } from './translatedMessage.entity';
+import { MessageEntity } from './message.entity';
 import { Language } from './enum/language.enum';
 
-@Entity('message')
-export class MessageEntity extends BaseEntity {
+@Entity('translated_message')
+export class TranslatedMessageEntity extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => UserEntity, (user) => user.messages)
+  @ManyToOne(() => MessageEntity, (message) => message.translatedMessages)
   @JoinColumn()
-  user: UserEntity;
-
-  @ManyToOne(() => RoomEntity, (room) => room.messages)
-  @JoinColumn()
-  room: RoomEntity;
-
-  @OneToMany(
-    () => TranslatedMessageEntity,
-    (translatedMessage) => translatedMessage.message,
-  )
-  translatedMessages: TranslatedMessageEntity[];
+  message: MessageEntity;
 
   @Column({
     type: 'enum',

@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { RoomEntity } from './room.entity';
 import { MessageEntity } from './message.entity';
+import { Language } from './enum/language.enum';
 
 @Entity('user')
 export class UserEntity extends BaseEntity {
@@ -37,9 +38,11 @@ export class UserEntity extends BaseEntity {
   nickname: string;
 
   @Column({
-    type: 'int',
+    type: 'enum',
+    enum: Language,
+    default: Language.KO,
   })
-  language: number;
+  language: Language;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
