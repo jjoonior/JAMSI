@@ -317,4 +317,48 @@ export class ChatsGateway implements OnGatewayConnection {
       });
     });
   }
+
+  @SubscribeMessage(EventName.HISTORY)
+  async getMessageHistory(
+    @MessageBody() dto: { roomId: number; messageId: number },
+    @ConnectedSocket() socket,
+  ) {
+    const room = await this.chatsService.getRoomById(dto.roomId);
+    if (!room) {
+      throw new WsException('존재하지 않는 채팅방입니다.');
+    }
+
+    const exist = await this.chatsService.isExistRoomUser(room, socket.user);
+    if (!exist) {
+      throw new WsException('채팅방을 찾을 수 없습니다.');
+    }
+
+    const limit = 25;
+    const messages = await this.chatsService.getMessageHistory(
+      room.id,
+      socket.user.language,
+      dto.messageId,
+      limit,
+    );
+
+    const data = {
+      roomId: room.id,
+      hasMore: limit === messages.length,
+      messages: messages.map((message) => ({
+        userId: message.user.id,
+        userNickname: message.user.nickname,
+        messageId: message.id,
+        message: {
+          languages: message.language,
+          content: message.content,
+        },
+        translatedMessage: {
+          language: message.translatedMessages[0]?.language || null,
+          content: message.translatedMessages[0]?.content || null,
+        },
+        createdAt: message.createdAt,
+      })),
+    };
+    socket.emit(EventName.HISTORY, data);
+  }
 }

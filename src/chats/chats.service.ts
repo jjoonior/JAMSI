@@ -127,4 +127,32 @@ export class ChatsService {
       })
       .save();
   }
+
+  async getMessageHistory(
+    roomId: number,
+    language: Language,
+    messageId: number,
+    limit: number,
+  ) {
+    const result = await this.messageEntityRepository
+      .createQueryBuilder('m')
+      .leftJoinAndSelect('m.user', 'u')
+      .leftJoinAndSelect(
+        'm.translatedMessages',
+        'tm',
+        'tm.language= :language',
+        {
+          language,
+        },
+      )
+      .where('m.roomId = :roomId', { roomId })
+      .orderBy('m.createdAt', 'DESC')
+      .limit(limit);
+
+    if (messageId) {
+      result.andWhere('m.id < :messageId', { messageId });
+    }
+
+    return await result.getMany();
+  }
 }
