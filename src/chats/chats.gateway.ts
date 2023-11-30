@@ -66,11 +66,21 @@ export class ChatsGateway implements OnGatewayConnection {
       newRoom.id,
     );
 
+    const data = {
+      info: `${socket.user.nickname}님이 채팅방을 생성했습니다.`,
+      id: newRoom.id,
+      title: newRoom.title,
+      users: newRoom.users.map((user) => ({
+        id: user.id,
+        nickname: user.nickname,
+      })),
+    };
+
     const userSockets = this.userSocketMap[socket.user.id];
     userSockets.forEach((socketId) => {
       const s = this.server.sockets.get(socketId);
       s.join(newRoom.id.toString());
-      s.emit(EventName.CREATE, '새로운 채팅방이 생성되었습니다.');
+      s.emit(EventName.CREATE, data);
     });
   }
 
