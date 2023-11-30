@@ -1,5 +1,5 @@
 export enum EventName {
-  CREATE = 'creat',
+  CREATE = 'create',
   JOIN = 'join',
   LEAVE = 'leave',
   ON = 'on',
