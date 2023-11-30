@@ -68,7 +68,7 @@ export class ChatsGateway implements OnGatewayConnection {
 
     const data = {
       info: `${socket.user.nickname}님이 채팅방을 생성했습니다.`,
-      id: newRoom.id,
+      roomId: newRoom.id,
       title: newRoom.title,
       users: newRoom.users.map((user) => ({
         id: user.id,
@@ -124,7 +124,7 @@ export class ChatsGateway implements OnGatewayConnection {
     // todo 채팅방의 다른 유저들에게도 입장을 알려야함 (유저 수 변동)
     const data = {
       info: `${socket.user.nickname}님이 들어왔습니다.`,
-      id: room.id,
+      roomId: room.id,
       title: room.title,
       users: room.users.map((user) => ({
         id: user.id,
@@ -163,7 +163,7 @@ export class ChatsGateway implements OnGatewayConnection {
 
     const data = {
       info: `${socket.user.nickname}님이 나갔습니다.`,
-      id: room.id,
+      roomId: room.id,
       title: room.title,
       users: room.users.map((user) => ({
         id: user.id,
@@ -204,7 +204,7 @@ export class ChatsGateway implements OnGatewayConnection {
     const messages = [];
 
     const data = {
-      id: room.id,
+      roomId: room.id,
       title: room.title,
       users: room.users.map((user) => ({
         id: user.id,
@@ -247,16 +247,19 @@ export class ChatsGateway implements OnGatewayConnection {
    * 채팅방 개수와 채팅방 리스트 emit
    */
   @SubscribeMessage(EventName.ROOMS)
-  async getRoomList(@ConnectedSocket() socket: Socket) {
+  async getRoomList(@ConnectedSocket() socket) {
     // todo 채팅방마다 마지막 메시지 내용과 시간도 같이 조회
     const [roomList, roomCount] = await this.chatsService.getRoomListByUserId(
-      socket['user'].id,
+      socket.user.id,
     );
 
     roomList.forEach((room: any) => {
       if (!socket.rooms.has(room.id.toString())) {
         socket.join(room.id.toString());
       }
+      // todo 쿼리에서 컬럼명 변경해서 가져오자
+      room.roomId = room.id;
+      delete room.id;
     });
 
     const data = { roomCount, roomList };
