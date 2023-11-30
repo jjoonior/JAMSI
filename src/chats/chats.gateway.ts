@@ -272,6 +272,7 @@ export class ChatsGateway implements OnGatewayConnection {
       socket.user,
       room,
       dto.content,
+      socket.user.language,
     );
 
     const languages = await this.translationService.getRoomUserLanguage(room);
@@ -290,7 +291,8 @@ export class ChatsGateway implements OnGatewayConnection {
         },
         translatedMessage: {
           language: user.language,
-          content: translatedMessageMap.get(user.language) || message.content,
+          content:
+            translatedMessageMap.get(user.language)?.content || message.content,
         },
         createdAt: message.createdAt,
       };

@@ -4,6 +4,7 @@ import { RoomEntity } from '../entity/room.entity';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../entity/user.entity';
 import { MessageEntity } from '../entity/message.entity';
+import { Language } from '../entity/enum/language.enum';
 
 @Injectable()
 export class ChatsService {
@@ -111,12 +112,18 @@ export class ChatsService {
   }
 
   // todo 언어 컬럼 추가 / 번역본 저장 테이블 OneToMany
-  async createMessage(user: UserEntity, room: RoomEntity, content: string) {
+  async createMessage(
+    user: UserEntity,
+    room: RoomEntity,
+    content: string,
+    language: Language,
+  ) {
     return this.messageEntityRepository
       .create({
         user,
         room,
         content,
+        language,
       })
       .save();
   }
