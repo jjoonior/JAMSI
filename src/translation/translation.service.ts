@@ -6,6 +6,7 @@ import { MessageEntity } from '../entity/message.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TranslatedMessageEntity } from '../entity/translatedMessage.entity';
 import { Repository } from 'typeorm';
+import { UserEntity } from '../entity/user.entity';
 
 @Injectable()
 export class TranslationService {
@@ -40,7 +41,7 @@ export class TranslationService {
   }
 
   async getRoomUserLanguage(room: RoomEntity) {
-    return new Set(room.users.map((user) => user.language));
+    return new Set(room.users.map((user: UserEntity) => user.language));
   }
 
   async createTranslatedMessage(
@@ -61,10 +62,10 @@ export class TranslationService {
     const translatedTextMap = new Map();
     const promises = [];
 
-    languages.forEach((language) => {
-      const source = message.language;
-      const target = language;
-      const text = message.content;
+    languages.forEach((language: Language) => {
+      const source: Language = message.language;
+      const target: Language = language;
+      const text: string = message.content;
 
       if (source !== target) {
         const translatedText = this.translate(source, target, text);
@@ -75,13 +76,15 @@ export class TranslationService {
     await Promise.all(promises);
 
     // todo translatedMessage 생성도 비동기로 돌리자
+    // todo translatedMessage가 아닌 translatedTextMap를 보내도 되는데 객체 생성은 비동기로 하고
     const translatedMessageMap = new Map();
     for (const [target, translatedText] of translatedTextMap) {
-      const translatedMessage = await this.createTranslatedMessage(
-        message,
-        target,
-        await translatedText,
-      );
+      const translatedMessage: TranslatedMessageEntity =
+        await this.createTranslatedMessage(
+          message,
+          target,
+          await translatedText,
+        );
       translatedMessageMap.set(target, translatedMessage);
     }
 
