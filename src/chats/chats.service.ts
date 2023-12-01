@@ -49,38 +49,6 @@ export class ChatsService {
       .save();
   }
 
-  /**
-   * 채팅방에 접속한 유저 관리
-   */
-  async addInChatUser(inChatUserMap: object, socket, roomId: number) {
-    if (!(roomId in inChatUserMap)) {
-      inChatUserMap[roomId] = {};
-    }
-
-    if (!(socket.user.id in inChatUserMap[roomId])) {
-      inChatUserMap[roomId][socket.user.id] = new Set();
-    }
-
-    inChatUserMap[roomId][socket.user.id].add(socket.id);
-  }
-
-  async delInChatUser(inChatUserMap: object, socket, roomId: number) {
-    if (!(roomId in inChatUserMap)) {
-      return;
-    }
-
-    if (!(socket.user.id in inChatUserMap[roomId])) {
-      return;
-    }
-
-    const userSocketList = inChatUserMap[roomId][socket.user.id];
-    userSocketList.delete(socket.id);
-
-    if (userSocketList.size === 0) {
-      delete inChatUserMap[roomId][socket.user.id];
-    }
-  }
-
   async getRoomById(roomId: number) {
     return await this.roomEntityRepository.findOne({
       where: { id: roomId },
@@ -89,11 +57,11 @@ export class ChatsService {
   }
 
   async isExistRoomUser(room: RoomEntity, user: UserEntity) {
-    return room.users.some((roomUser) => roomUser.id === user.id);
+    return room.users.some((roomUser: UserEntity) => roomUser.id === user.id);
   }
 
   async addRoomUser(room: RoomEntity, user: UserEntity) {
-    const exist = await this.isExistRoomUser(room, user);
+    const exist: boolean = await this.isExistRoomUser(room, user);
     if (!exist) {
       room.users.push(user);
     }
@@ -101,12 +69,14 @@ export class ChatsService {
   }
 
   async delRoomUser(room: RoomEntity, user: UserEntity) {
-    room.users = room.users.filter((roomUser) => roomUser.id !== user.id);
+    room.users = room.users.filter(
+      (roomUser: UserEntity) => roomUser.id !== user.id,
+    );
     return this.roomEntityRepository.save(room);
   }
 
   async updateRoomTitle(room: RoomEntity) {
-    const users = room.users.map((user) => user.nickname);
+    const users = room.users.map((user: UserEntity) => user.nickname);
     room.title = Array.from(new Set(users)).join(', ');
     return this.roomEntityRepository.save(room);
   }
@@ -153,9 +123,9 @@ export class ChatsService {
       query.andWhere('m.id < :messageId', { messageId });
     }
 
-    const messages = await query.getMany();
+    const messages: MessageEntity[] = await query.getMany();
 
-    return messages.map((message) => ({
+    return messages.map((message: MessageEntity) => ({
       userId: message.user.id,
       userNickname: message.user.nickname,
       messageId: message.id,

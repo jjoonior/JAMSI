@@ -12,6 +12,10 @@ import { ChatsService } from './chats.service';
 import { AuthService } from '../auth/auth.service';
 import { EventName } from '../entity/enum/eventName.enum';
 import { TranslationService } from '../translation/translation.service';
+import { RoomEntity } from '../entity/room.entity';
+import { UserEntity } from '../entity/user.entity';
+import { MessageEntity } from '../entity/message.entity';
+import { Language } from '../entity/enum/language.enum';
 
 @WebSocketGateway({
   namespace: 'chats',
@@ -20,7 +24,6 @@ export class ChatsGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Namespace;
 
-  inChatUserMap = {};
   userSocketMap = {};
 
   constructor(
@@ -29,21 +32,21 @@ export class ChatsGateway implements OnGatewayConnection {
     private readonly translationService: TranslationService,
   ) {}
 
-  async handleConnection(socket): Promise<any> {
+  async handleConnection(socket: Socket): Promise<any> {
     try {
       const { cookie } = socket.handshake.headers;
       if (!cookie) {
         throw new WsException('토큰이 존재하지 않습니다.');
       }
 
-      const accessToken = cookie.split(';')[0].trim().split('=')[1];
+      const accessToken: string = cookie.split(';')[0].trim().split('=')[1];
       const payload = this.authService.verifyToken(accessToken);
       // todo Socket 타입을 지정하면서 체인 형태로 user 정보를 담으려면 socket.data에 저장해야함
-      socket.user = await this.authService.getUserByPayload(payload);
+      socket.data.user = await this.authService.getUserByPayload(payload);
 
       await this.chatsService.addUserSocket(
         this.userSocketMap,
-        socket.user.id,
+        socket.data.user.id,
         socket.id,
       );
     } catch (e) {
@@ -60,28 +63,24 @@ export class ChatsGateway implements OnGatewayConnection {
    * 모든 소켓에게 채팅방 생성을 알림
    */
   @SubscribeMessage(EventName.CREATE)
-  async createRoom(@ConnectedSocket() socket) {
-    const newRoom = await this.chatsService.createRoom(socket.user);
-
-    await this.chatsService.addInChatUser(
-      this.inChatUserMap,
-      socket,
-      newRoom.id,
+  async createRoom(@ConnectedSocket() socket: Socket) {
+    const newRoom: RoomEntity = await this.chatsService.createRoom(
+      socket.data.user,
     );
 
     const data = {
-      info: `${socket.user.nickname}님이 채팅방을 생성했습니다.`,
+      info: `${socket.data.user.nickname}님이 채팅방을 생성했습니다.`,
       roomId: newRoom.id,
       title: newRoom.title,
-      users: newRoom.users.map((user) => ({
+      users: newRoom.users.map((user: UserEntity) => ({
         id: user.id,
         nickname: user.nickname,
       })),
     };
 
-    const userSockets = this.userSocketMap[socket.user.id];
-    userSockets.forEach((socketId) => {
-      const s = this.server.sockets.get(socketId);
+    const userSockets = this.userSocketMap[socket.data.user.id];
+    userSockets.forEach((socketId: string) => {
+      const s: Socket = this.server.sockets.get(socketId);
       s.join(newRoom.id.toString());
       s.emit(EventName.CREATE, data);
     });
@@ -101,39 +100,37 @@ export class ChatsGateway implements OnGatewayConnection {
   @SubscribeMessage(EventName.JOIN)
   async joinRoom(
     @MessageBody() dto: { roomId: number },
-    @ConnectedSocket() socket,
+    @ConnectedSocket() socket: Socket,
   ) {
-    const room = await this.chatsService.getRoomById(dto.roomId);
+    const room: RoomEntity = await this.chatsService.getRoomById(dto.roomId);
     if (!room) {
       throw new WsException('존재하지 않는 채팅방입니다.');
     }
 
-    await this.chatsService.addRoomUser(room, socket.user);
-
-    await this.chatsService.addInChatUser(this.inChatUserMap, socket, room.id);
+    await this.chatsService.addRoomUser(room, socket.data.user);
 
     const limit = 25;
     const messages = await this.chatsService.getMessageHistory(
       room.id,
-      socket.user.language,
+      socket.data.user.language,
       limit,
     );
 
     // todo 마지막에 한번만 save하면 트랜잭션 처리로 볼 수 있곘는데
     await this.chatsService.updateRoomTitle(room);
 
-    const userSockets = this.userSocketMap[socket.user.id];
-    userSockets.forEach((socketId) => {
-      const s = this.server.sockets.get(socketId);
+    const userSockets = this.userSocketMap[socket.data.user.id];
+    userSockets.forEach((socketId: string) => {
+      const s: Socket = this.server.sockets.get(socketId);
       s.join(room.id.toString());
     });
 
     // todo 채팅방의 다른 유저들에게도 입장을 알려야함 (유저 수 변동)
     const data = {
-      info: `${socket.user.nickname}님이 들어왔습니다.`,
+      info: `${socket.data.user.nickname}님이 들어왔습니다.`,
       roomId: room.id,
       title: room.title,
-      users: room.users.map((user) => ({
+      users: room.users.map((user: UserEntity) => ({
         id: user.id,
         nickname: user.nickname,
       })),
@@ -155,34 +152,32 @@ export class ChatsGateway implements OnGatewayConnection {
   @SubscribeMessage(EventName.LEAVE)
   async leaveRoom(
     @MessageBody() dto: { roomId: number },
-    @ConnectedSocket() socket,
+    @ConnectedSocket() socket: Socket,
   ) {
-    const room = await this.chatsService.getRoomById(dto.roomId);
+    const room: RoomEntity = await this.chatsService.getRoomById(dto.roomId);
     if (!room) {
       throw new WsException('존재하지 않는 채팅방입니다.');
     }
 
-    await this.chatsService.delRoomUser(room, socket.user);
-
-    await this.chatsService.delInChatUser(this.inChatUserMap, socket, room.id);
+    await this.chatsService.delRoomUser(room, socket.data.user);
 
     // todo 마지막에 한번만 save하면 트랜잭션 처리로 볼 수 있곘는데
     await this.chatsService.updateRoomTitle(room);
 
     const data = {
-      info: `${socket.user.nickname}님이 나갔습니다.`,
+      info: `${socket.data.user.nickname}님이 나갔습니다.`,
       roomId: room.id,
       title: room.title,
-      users: room.users.map((user) => ({
+      users: room.users.map((user: UserEntity) => ({
         id: user.id,
         nickname: user.nickname,
       })),
     };
     this.server.in(room.id.toString()).emit(EventName.LEAVE, data);
 
-    const userSockets = this.userSocketMap[socket.user.id];
-    userSockets.forEach((socketId) => {
-      const s = this.server.sockets.get(socketId);
+    const userSockets = this.userSocketMap[socket.data.user.id];
+    userSockets.forEach((socketId: string) => {
+      const s: Socket = this.server.sockets.get(socketId);
       s.leave(room.id.toString());
     });
   }
@@ -194,31 +189,32 @@ export class ChatsGateway implements OnGatewayConnection {
   @SubscribeMessage(EventName.ON)
   async onChat(
     @MessageBody() dto: { roomId: number },
-    @ConnectedSocket() socket,
+    @ConnectedSocket() socket: Socket,
   ) {
-    const room = await this.chatsService.getRoomById(dto.roomId);
+    const room: RoomEntity = await this.chatsService.getRoomById(dto.roomId);
     if (!room) {
       throw new WsException('존재하지 않는 채팅방입니다.');
     }
 
-    const exist = await this.chatsService.isExistRoomUser(room, socket.user);
+    const exist: boolean = await this.chatsService.isExistRoomUser(
+      room,
+      socket.data.user,
+    );
     if (!exist) {
       throw new WsException('채팅방을 찾을 수 없습니다.');
     }
 
-    await this.chatsService.addInChatUser(this.inChatUserMap, socket, room.id);
-
     const limit = 25;
     const messages = await this.chatsService.getMessageHistory(
       room.id,
-      socket.user.language,
+      socket.data.user.language,
       limit,
     );
 
     const data = {
       roomId: room.id,
       title: room.title,
-      users: room.users.map((user) => ({
+      users: room.users.map((user: UserEntity) => ({
         id: user.id,
         nickname: user.nickname,
       })),
@@ -229,41 +225,16 @@ export class ChatsGateway implements OnGatewayConnection {
   }
 
   /**
-   * 채팅방 off 처리 (inChatUser 삭제)
-   * 따로 emit할 정보 없음
-   */
-  @SubscribeMessage(EventName.OFF)
-  async offChat(
-    @MessageBody() dto: { roomId: number },
-    @ConnectedSocket() socket,
-  ) {
-    const room = await this.chatsService.getRoomById(dto.roomId);
-    if (!room) {
-      throw new WsException('존재하지 않는 채팅방입니다.');
-    }
-
-    const exist = await this.chatsService.isExistRoomUser(room, socket.user);
-    if (!exist) {
-      throw new WsException('채팅방을 찾을 수 없습니다.');
-    }
-
-    await this.chatsService.delInChatUser(this.inChatUserMap, socket, room.id);
-
-    // const data = {};
-    // socket.emit(EventName.OFF, data);
-  }
-
-  /**
    * 유저가 참여중인 채팅방 리스트 조회
    * 조회시 채팅방마다 참여중인 유저 리스트와 마지막 메시지 내용 및 시간을 가져옴
    * 해당 room에 join 안된 소켓은 join
    * 채팅방 개수와 채팅방 리스트 emit
    */
   @SubscribeMessage(EventName.ROOMS)
-  async getRoomList(@ConnectedSocket() socket) {
+  async getRoomList(@ConnectedSocket() socket: Socket) {
     // todo 채팅방마다 마지막 메시지 내용과 시간도 같이 조회
     const [roomList, roomCount] = await this.chatsService.getRoomListByUserId(
-      socket.user.id,
+      socket.data.user.id,
     );
 
     roomList.forEach((room: any) => {
@@ -287,34 +258,38 @@ export class ChatsGateway implements OnGatewayConnection {
   @SubscribeMessage(EventName.MESSAGE)
   async onMessage(
     @MessageBody() dto: { roomId: number; content: string },
-    @ConnectedSocket() socket,
+    @ConnectedSocket() socket: Socket,
   ) {
-    const room = await this.chatsService.getRoomById(dto.roomId);
+    const room: RoomEntity = await this.chatsService.getRoomById(dto.roomId);
     if (!room) {
       throw new WsException('존재하지 않는 채팅방입니다.');
     }
 
-    const exist = await this.chatsService.isExistRoomUser(room, socket.user);
+    const exist: boolean = await this.chatsService.isExistRoomUser(
+      room,
+      socket.data.user,
+    );
     if (!exist) {
       throw new WsException('채팅방을 찾을 수 없습니다.');
     }
 
-    const message = await this.chatsService.createMessage(
-      socket.user,
+    const message: MessageEntity = await this.chatsService.createMessage(
+      socket.data.user,
       room,
       dto.content,
-      socket.user.language,
+      socket.data.user.language,
     );
 
-    const languages = await this.translationService.getRoomUserLanguage(room);
+    const languages: Set<Language> =
+      await this.translationService.getRoomUserLanguage(room);
     const translatedMessageMap =
       await this.translationService.getTranslatedMessage(message, languages);
 
-    room.users.forEach((user) => {
+    room.users.forEach((user: UserEntity) => {
       const data = {
         roomId: room.id,
-        userId: socket.user.id,
-        userNickname: socket.user.nickname,
+        userId: socket.data.user.id,
+        userNickname: socket.data.user.nickname,
         messageId: message.id,
         message: {
           languages: message.language,
@@ -329,8 +304,8 @@ export class ChatsGateway implements OnGatewayConnection {
       };
 
       const userSockets = this.userSocketMap[user.id] || [];
-      userSockets.forEach((socketId) => {
-        const s = this.server.sockets.get(socketId);
+      userSockets.forEach((socketId: string) => {
+        const s: Socket = this.server.sockets.get(socketId);
         s.emit(EventName.MESSAGE, data);
       });
     });
@@ -339,14 +314,17 @@ export class ChatsGateway implements OnGatewayConnection {
   @SubscribeMessage(EventName.HISTORY)
   async getMessageHistory(
     @MessageBody() dto: { roomId: number; messageId: number },
-    @ConnectedSocket() socket,
+    @ConnectedSocket() socket: Socket,
   ) {
-    const room = await this.chatsService.getRoomById(dto.roomId);
+    const room: RoomEntity = await this.chatsService.getRoomById(dto.roomId);
     if (!room) {
       throw new WsException('존재하지 않는 채팅방입니다.');
     }
 
-    const exist = await this.chatsService.isExistRoomUser(room, socket.user);
+    const exist: boolean = await this.chatsService.isExistRoomUser(
+      room,
+      socket.data.user,
+    );
     if (!exist) {
       throw new WsException('채팅방을 찾을 수 없습니다.');
     }
@@ -354,7 +332,7 @@ export class ChatsGateway implements OnGatewayConnection {
     const limit = 25;
     const messages = await this.chatsService.getMessageHistory(
       room.id,
-      socket.user.language,
+      socket.data.user.language,
       limit,
       dto.messageId,
     );
