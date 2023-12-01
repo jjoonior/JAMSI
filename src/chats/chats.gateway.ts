@@ -20,7 +20,6 @@ export class ChatsGateway implements OnGatewayConnection {
   @WebSocketServer()
   server: Namespace;
 
-  inChatUserMap = {};
   userSocketMap = {};
 
   constructor(
@@ -63,12 +62,6 @@ export class ChatsGateway implements OnGatewayConnection {
   async createRoom(@ConnectedSocket() socket) {
     const newRoom = await this.chatsService.createRoom(socket.user);
 
-    await this.chatsService.addInChatUser(
-      this.inChatUserMap,
-      socket,
-      newRoom.id,
-    );
-
     const data = {
       info: `${socket.user.nickname}님이 채팅방을 생성했습니다.`,
       roomId: newRoom.id,
@@ -109,8 +102,6 @@ export class ChatsGateway implements OnGatewayConnection {
     }
 
     await this.chatsService.addRoomUser(room, socket.user);
-
-    await this.chatsService.addInChatUser(this.inChatUserMap, socket, room.id);
 
     const limit = 25;
     const messages = await this.chatsService.getMessageHistory(
@@ -164,8 +155,6 @@ export class ChatsGateway implements OnGatewayConnection {
 
     await this.chatsService.delRoomUser(room, socket.user);
 
-    await this.chatsService.delInChatUser(this.inChatUserMap, socket, room.id);
-
     // todo 마지막에 한번만 save하면 트랜잭션 처리로 볼 수 있곘는데
     await this.chatsService.updateRoomTitle(room);
 
@@ -206,8 +195,6 @@ export class ChatsGateway implements OnGatewayConnection {
       throw new WsException('채팅방을 찾을 수 없습니다.');
     }
 
-    await this.chatsService.addInChatUser(this.inChatUserMap, socket, room.id);
-
     const limit = 25;
     const messages = await this.chatsService.getMessageHistory(
       room.id,
@@ -226,31 +213,6 @@ export class ChatsGateway implements OnGatewayConnection {
       messages,
     };
     socket.emit(EventName.ON, data);
-  }
-
-  /**
-   * 채팅방 off 처리 (inChatUser 삭제)
-   * 따로 emit할 정보 없음
-   */
-  @SubscribeMessage(EventName.OFF)
-  async offChat(
-    @MessageBody() dto: { roomId: number },
-    @ConnectedSocket() socket,
-  ) {
-    const room = await this.chatsService.getRoomById(dto.roomId);
-    if (!room) {
-      throw new WsException('존재하지 않는 채팅방입니다.');
-    }
-
-    const exist = await this.chatsService.isExistRoomUser(room, socket.user);
-    if (!exist) {
-      throw new WsException('채팅방을 찾을 수 없습니다.');
-    }
-
-    await this.chatsService.delInChatUser(this.inChatUserMap, socket, room.id);
-
-    // const data = {};
-    // socket.emit(EventName.OFF, data);
   }
 
   /**

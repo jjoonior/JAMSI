@@ -49,38 +49,6 @@ export class ChatsService {
       .save();
   }
 
-  /**
-   * 채팅방에 접속한 유저 관리
-   */
-  async addInChatUser(inChatUserMap: object, socket, roomId: number) {
-    if (!(roomId in inChatUserMap)) {
-      inChatUserMap[roomId] = {};
-    }
-
-    if (!(socket.user.id in inChatUserMap[roomId])) {
-      inChatUserMap[roomId][socket.user.id] = new Set();
-    }
-
-    inChatUserMap[roomId][socket.user.id].add(socket.id);
-  }
-
-  async delInChatUser(inChatUserMap: object, socket, roomId: number) {
-    if (!(roomId in inChatUserMap)) {
-      return;
-    }
-
-    if (!(socket.user.id in inChatUserMap[roomId])) {
-      return;
-    }
-
-    const userSocketList = inChatUserMap[roomId][socket.user.id];
-    userSocketList.delete(socket.id);
-
-    if (userSocketList.size === 0) {
-      delete inChatUserMap[roomId][socket.user.id];
-    }
-  }
-
   async getRoomById(roomId: number) {
     return await this.roomEntityRepository.findOne({
       where: { id: roomId },
