@@ -131,8 +131,8 @@ export class ChatsService {
   async getMessageHistory(
     roomId: number,
     language: Language,
-    messageId: number,
     limit: number,
+    messageId: number | void,
   ) {
     const query = this.messageEntityRepository
       .createQueryBuilder('m')

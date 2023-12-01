@@ -112,8 +112,12 @@ export class ChatsGateway implements OnGatewayConnection {
 
     await this.chatsService.addInChatUser(this.inChatUserMap, socket, room.id);
 
-    // todo 이전 채팅 내역 조회
-    const messages = [];
+    const limit = 25;
+    const messages = await this.chatsService.getMessageHistory(
+      room.id,
+      socket.user.language,
+      limit,
+    );
 
     // todo 마지막에 한번만 save하면 트랜잭션 처리로 볼 수 있곘는데
     await this.chatsService.updateRoomTitle(room);
@@ -133,6 +137,7 @@ export class ChatsGateway implements OnGatewayConnection {
         id: user.id,
         nickname: user.nickname,
       })),
+      hasMore: limit === messages.length,
       messages,
     };
     this.server.in(room.id.toString()).emit(EventName.JOIN, data);
@@ -203,8 +208,12 @@ export class ChatsGateway implements OnGatewayConnection {
 
     await this.chatsService.addInChatUser(this.inChatUserMap, socket, room.id);
 
-    // todo 이전 채팅 내역 조회
-    const messages = [];
+    const limit = 25;
+    const messages = await this.chatsService.getMessageHistory(
+      room.id,
+      socket.user.language,
+      limit,
+    );
 
     const data = {
       roomId: room.id,
@@ -213,6 +222,7 @@ export class ChatsGateway implements OnGatewayConnection {
         id: user.id,
         nickname: user.nickname,
       })),
+      hasMore: limit === messages.length,
       messages,
     };
     socket.emit(EventName.ON, data);
@@ -345,8 +355,8 @@ export class ChatsGateway implements OnGatewayConnection {
     const messages = await this.chatsService.getMessageHistory(
       room.id,
       socket.user.language,
-      dto.messageId,
       limit,
+      dto.messageId,
     );
 
     const data = {
