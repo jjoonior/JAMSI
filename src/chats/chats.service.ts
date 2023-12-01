@@ -134,7 +134,7 @@ export class ChatsService {
     messageId: number,
     limit: number,
   ) {
-    const result = this.messageEntityRepository
+    const query = this.messageEntityRepository
       .createQueryBuilder('m')
       .leftJoinAndSelect('m.user', 'u')
       .leftJoinAndSelect(
@@ -150,9 +150,24 @@ export class ChatsService {
       .limit(limit);
 
     if (messageId) {
-      result.andWhere('m.id < :messageId', { messageId });
+      query.andWhere('m.id < :messageId', { messageId });
     }
 
-    return await result.getMany();
+    const messages = await query.getMany();
+
+    return messages.map((message) => ({
+      userId: message.user.id,
+      userNickname: message.user.nickname,
+      messageId: message.id,
+      message: {
+        languages: message.language,
+        content: message.content,
+      },
+      translatedMessage: {
+        language: message.translatedMessages[0]?.language || null,
+        content: message.translatedMessages[0]?.content || null,
+      },
+      createdAt: message.createdAt,
+    }));
   }
 }

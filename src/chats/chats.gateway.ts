@@ -352,20 +352,7 @@ export class ChatsGateway implements OnGatewayConnection {
     const data = {
       roomId: room.id,
       hasMore: limit === messages.length,
-      messages: messages.map((message) => ({
-        userId: message.user.id,
-        userNickname: message.user.nickname,
-        messageId: message.id,
-        message: {
-          languages: message.language,
-          content: message.content,
-        },
-        translatedMessage: {
-          language: message.translatedMessages[0]?.language || null,
-          content: message.translatedMessages[0]?.content || null,
-        },
-        createdAt: message.createdAt,
-      })),
+      messages,
     };
     socket.emit(EventName.HISTORY, data);
   }
