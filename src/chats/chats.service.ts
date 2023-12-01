@@ -33,7 +33,7 @@ export class ChatsService {
   /**
    * 동일 유저에 대한 소켓들을 관리 (ex - 여러 기기 접속)
    */
-  async addUserSocket(userSocketMap, userId: string, socketId: string) {
+  async addUserSocket(userSocketMap: object, userId: string, socketId: string) {
     if (!(userId in userSocketMap)) {
       userSocketMap[userId] = [];
     }
@@ -52,7 +52,7 @@ export class ChatsService {
   /**
    * 채팅방에 접속한 유저 관리
    */
-  async addInChatUser(inChatUserMap, socket, roomId) {
+  async addInChatUser(inChatUserMap: object, socket, roomId: number) {
     if (!(roomId in inChatUserMap)) {
       inChatUserMap[roomId] = {};
     }
@@ -64,7 +64,7 @@ export class ChatsService {
     inChatUserMap[roomId][socket.user.id].add(socket.id);
   }
 
-  async delInChatUser(inChatUserMap, socket, roomId) {
+  async delInChatUser(inChatUserMap: object, socket, roomId: number) {
     if (!(roomId in inChatUserMap)) {
       return;
     }
@@ -126,5 +126,48 @@ export class ChatsService {
         language,
       })
       .save();
+  }
+
+  async getMessageHistory(
+    roomId: number,
+    language: Language,
+    limit: number,
+    messageId: number | void,
+  ) {
+    const query = this.messageEntityRepository
+      .createQueryBuilder('m')
+      .leftJoinAndSelect('m.user', 'u')
+      .leftJoinAndSelect(
+        'm.translatedMessages',
+        'tm',
+        'tm.language= :language',
+        {
+          language,
+        },
+      )
+      .where('m.roomId = :roomId', { roomId })
+      .orderBy('m.createdAt', 'DESC')
+      .limit(limit);
+
+    if (messageId) {
+      query.andWhere('m.id < :messageId', { messageId });
+    }
+
+    const messages = await query.getMany();
+
+    return messages.map((message) => ({
+      userId: message.user.id,
+      userNickname: message.user.nickname,
+      messageId: message.id,
+      message: {
+        languages: message.language,
+        content: message.content,
+      },
+      translatedMessage: {
+        language: message.translatedMessages[0]?.language || null,
+        content: message.translatedMessages[0]?.content || null,
+      },
+      createdAt: message.createdAt,
+    }));
   }
 }

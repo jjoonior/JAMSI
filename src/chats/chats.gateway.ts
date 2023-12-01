@@ -38,6 +38,7 @@ export class ChatsGateway implements OnGatewayConnection {
 
       const accessToken = cookie.split(';')[0].trim().split('=')[1];
       const payload = this.authService.verifyToken(accessToken);
+      // todo Socket 타입을 지정하면서 체인 형태로 user 정보를 담으려면 socket.data에 저장해야함
       socket.user = await this.authService.getUserByPayload(payload);
 
       await this.chatsService.addUserSocket(
@@ -46,6 +47,8 @@ export class ChatsGateway implements OnGatewayConnection {
         socket.id,
       );
     } catch (e) {
+      // todo 필터때문에 disconnected 이벤트 쓸 일 없을듯 - 쓸거면 enum으로
+      // todo 연결 끊긴 경우 이벤트 관리 - inChatUser, userSocket 에서 삭제
       socket.emit('disconnected', '유효하지 않은 토큰입니다.');
       socket.disconnect();
     }
@@ -66,11 +69,21 @@ export class ChatsGateway implements OnGatewayConnection {
       newRoom.id,
     );
 
+    const data = {
+      info: `${socket.user.nickname}님이 채팅방을 생성했습니다.`,
+      roomId: newRoom.id,
+      title: newRoom.title,
+      users: newRoom.users.map((user) => ({
+        id: user.id,
+        nickname: user.nickname,
+      })),
+    };
+
     const userSockets = this.userSocketMap[socket.user.id];
     userSockets.forEach((socketId) => {
       const s = this.server.sockets.get(socketId);
       s.join(newRoom.id.toString());
-      s.emit(EventName.CREATE, '새로운 채팅방이 생성되었습니다.');
+      s.emit(EventName.CREATE, data);
     });
   }
 
@@ -99,8 +112,12 @@ export class ChatsGateway implements OnGatewayConnection {
 
     await this.chatsService.addInChatUser(this.inChatUserMap, socket, room.id);
 
-    // todo 이전 채팅 내역 조회
-    const messages = [];
+    const limit = 25;
+    const messages = await this.chatsService.getMessageHistory(
+      room.id,
+      socket.user.language,
+      limit,
+    );
 
     // todo 마지막에 한번만 save하면 트랜잭션 처리로 볼 수 있곘는데
     await this.chatsService.updateRoomTitle(room);
@@ -114,12 +131,13 @@ export class ChatsGateway implements OnGatewayConnection {
     // todo 채팅방의 다른 유저들에게도 입장을 알려야함 (유저 수 변동)
     const data = {
       info: `${socket.user.nickname}님이 들어왔습니다.`,
-      id: room.id,
+      roomId: room.id,
       title: room.title,
       users: room.users.map((user) => ({
         id: user.id,
         nickname: user.nickname,
       })),
+      hasMore: limit === messages.length,
       messages,
     };
     this.server.in(room.id.toString()).emit(EventName.JOIN, data);
@@ -153,7 +171,7 @@ export class ChatsGateway implements OnGatewayConnection {
 
     const data = {
       info: `${socket.user.nickname}님이 나갔습니다.`,
-      id: room.id,
+      roomId: room.id,
       title: room.title,
       users: room.users.map((user) => ({
         id: user.id,
@@ -190,16 +208,21 @@ export class ChatsGateway implements OnGatewayConnection {
 
     await this.chatsService.addInChatUser(this.inChatUserMap, socket, room.id);
 
-    // todo 이전 채팅 내역 조회
-    const messages = [];
+    const limit = 25;
+    const messages = await this.chatsService.getMessageHistory(
+      room.id,
+      socket.user.language,
+      limit,
+    );
 
     const data = {
-      id: room.id,
+      roomId: room.id,
       title: room.title,
       users: room.users.map((user) => ({
         id: user.id,
         nickname: user.nickname,
       })),
+      hasMore: limit === messages.length,
       messages,
     };
     socket.emit(EventName.ON, data);
@@ -237,22 +260,30 @@ export class ChatsGateway implements OnGatewayConnection {
    * 채팅방 개수와 채팅방 리스트 emit
    */
   @SubscribeMessage(EventName.ROOMS)
-  async getRoomList(@ConnectedSocket() socket: Socket) {
+  async getRoomList(@ConnectedSocket() socket) {
     // todo 채팅방마다 마지막 메시지 내용과 시간도 같이 조회
     const [roomList, roomCount] = await this.chatsService.getRoomListByUserId(
-      socket['user'].id,
+      socket.user.id,
     );
 
     roomList.forEach((room: any) => {
       if (!socket.rooms.has(room.id.toString())) {
         socket.join(room.id.toString());
       }
+      // todo 쿼리에서 컬럼명 변경해서 가져오자
+      room.roomId = room.id;
+      delete room.id;
     });
 
     const data = { roomCount, roomList };
     socket.emit(EventName.ROOMS, data);
   }
 
+  /**
+   * 원본 메시지 객체 생성
+   * 채팅방 유저들의 언어별 번역본 저장
+   * 유저마다 모든 소켓에 유저 언어에 맞는 번역 메시지 전송
+   */
   @SubscribeMessage(EventName.MESSAGE)
   async onMessage(
     @MessageBody() dto: { roomId: number; content: string },
@@ -303,5 +334,36 @@ export class ChatsGateway implements OnGatewayConnection {
         s.emit(EventName.MESSAGE, data);
       });
     });
+  }
+
+  @SubscribeMessage(EventName.HISTORY)
+  async getMessageHistory(
+    @MessageBody() dto: { roomId: number; messageId: number },
+    @ConnectedSocket() socket,
+  ) {
+    const room = await this.chatsService.getRoomById(dto.roomId);
+    if (!room) {
+      throw new WsException('존재하지 않는 채팅방입니다.');
+    }
+
+    const exist = await this.chatsService.isExistRoomUser(room, socket.user);
+    if (!exist) {
+      throw new WsException('채팅방을 찾을 수 없습니다.');
+    }
+
+    const limit = 25;
+    const messages = await this.chatsService.getMessageHistory(
+      room.id,
+      socket.user.language,
+      limit,
+      dto.messageId,
+    );
+
+    const data = {
+      roomId: room.id,
+      hasMore: limit === messages.length,
+      messages,
+    };
+    socket.emit(EventName.HISTORY, data);
   }
 }

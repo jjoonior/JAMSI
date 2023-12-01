@@ -74,6 +74,7 @@ export class TranslationService {
     });
     await Promise.all(promises);
 
+    // todo translatedMessage 생성도 비동기로 돌리자
     const translatedMessageMap = new Map();
     for (const [target, translatedText] of translatedTextMap) {
       const translatedMessage = await this.createTranslatedMessage(
