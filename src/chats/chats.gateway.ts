@@ -38,6 +38,7 @@ export class ChatsGateway implements OnGatewayConnection {
 
       const accessToken = cookie.split(';')[0].trim().split('=')[1];
       const payload = this.authService.verifyToken(accessToken);
+      // todo Socket 타입을 지정하면서 체인 형태로 user 정보를 담으려면 socket.data에 저장해야함
       socket.user = await this.authService.getUserByPayload(payload);
 
       await this.chatsService.addUserSocket(
@@ -46,6 +47,8 @@ export class ChatsGateway implements OnGatewayConnection {
         socket.id,
       );
     } catch (e) {
+      // todo 필터때문에 disconnected 이벤트 쓸 일 없을듯 - 쓸거면 enum으로
+      // todo 연결 끊긴 경우 이벤트 관리 - inChatUser, userSocket 에서 삭제
       socket.emit('disconnected', '유효하지 않은 토큰입니다.');
       socket.disconnect();
     }
@@ -266,6 +269,11 @@ export class ChatsGateway implements OnGatewayConnection {
     socket.emit(EventName.ROOMS, data);
   }
 
+  /**
+   * 원본 메시지 객체 생성
+   * 채팅방 유저들의 언어별 번역본 저장
+   * 유저마다 모든 소켓에 유저 언어에 맞는 번역 메시지 전송
+   */
   @SubscribeMessage(EventName.MESSAGE)
   async onMessage(
     @MessageBody() dto: { roomId: number; content: string },
