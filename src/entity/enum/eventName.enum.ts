@@ -1,4 +1,5 @@
 export enum EventName {
+  CONNECTION = 'connection',
   CREATE = 'create',
   JOIN = 'join',
   LEAVE = 'leave',
