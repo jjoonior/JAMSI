@@ -19,6 +19,10 @@ import { Language } from '../entity/enum/language.enum';
 
 @WebSocketGateway({
   namespace: 'chats',
+  cors: {
+    origin: true,
+    credentials: true,
+  },
 })
 export class ChatsGateway implements OnGatewayConnection {
   @WebSocketServer()
@@ -49,6 +53,8 @@ export class ChatsGateway implements OnGatewayConnection {
         socket.data.user.id,
         socket.id,
       );
+
+      socket.emit(EventName.CONNECTION, '소켓이 연결되었습니다.');
     } catch (e) {
       // todo 필터때문에 disconnected 이벤트 쓸 일 없을듯 - 쓸거면 enum으로
       // todo 연결 끊긴 경우 이벤트 관리 - inChatUser, userSocket 에서 삭제
