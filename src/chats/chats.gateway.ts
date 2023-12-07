@@ -19,6 +19,10 @@ import { Language } from '../entity/enum/language.enum';
 
 @WebSocketGateway({
   namespace: 'chats',
+  cors: {
+    origin: true,
+    credentials: true,
+  },
 })
 export class ChatsGateway implements OnGatewayConnection {
   @WebSocketServer()
