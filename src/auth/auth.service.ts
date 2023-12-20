@@ -17,7 +17,8 @@ import { Language } from '../entity/enum/language.enum';
 
 const cookieOptions = {
   httpOnly: true,
-  secure: true,
+  // https를 사용하지 않으면 쿠키를 전송하지 않는 옵션
+  // secure: true,
 };
 
 @Injectable()
