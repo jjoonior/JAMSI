@@ -75,7 +75,7 @@ export class AuthService {
     const mailOptions = {
       from: process.env.MAIL_USER,
       to: email,
-      subject: '[JAMSI] 인증 코드',
+      subject: `[${process.env.APP_NAME}] 인증 코드`,
       text: `인증코드: ${code}`,
     };
     this.transporter.sendMail(mailOptions);
