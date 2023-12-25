@@ -23,7 +23,7 @@ const dailyOption = (level: string) => {
 };
 
 const printFormat = (info) =>
-  `[${process.env.APP_NAME}] ${info.level.padEnd(7, ' ')} ${info.timestamp} - ${
+  `[${process.env.APP_NAME}] ${info.level.padEnd(7, ' ')} [${info.timestamp}] ${
     info.message
   }`;
 
