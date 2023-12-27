@@ -118,7 +118,8 @@ export class AuthService {
     });
     const newUser = await this.userEntityRepository.save(newUserObject);
 
-    await this.signToken(res, newUser);
+    const token = await this.signToken(res, newUser);
+    return { accessToken: token.accessToken, refreshToken: token.refreshToken };
   }
 
   async login(res, email: string, password: string) {
@@ -134,7 +135,8 @@ export class AuthService {
       throw new UnauthorizedException('비밀번호가 틀렸습니다.');
     }
 
-    await this.signToken(res, user);
+    const token = await this.signToken(res, user);
+    return { accessToken: token.accessToken, refreshToken: token.refreshToken };
   }
 
   async signToken(res, user) {
@@ -158,7 +160,7 @@ export class AuthService {
 
     await this.storeToken(user.id, accessToken, refreshToken);
 
-    return payload;
+    return { accessToken, refreshToken, payload };
   }
 
   async storeToken(id: string, accessToken: string, refreshToken: string) {
@@ -200,7 +202,7 @@ export class AuthService {
       ) {
         throw new Error();
       }
-      return this.signToken(res, payload);
+      return (await this.signToken(res, payload)).payload;
     } catch (e) {
       throw new UnauthorizedException('유효하지 않은 토큰입니다.');
     }
