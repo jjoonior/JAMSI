@@ -8,6 +8,8 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { ChatsModule } from './chats/chats.module';
 import { TranslationModule } from './translation/translation.module';
 import * as redisStore from 'cache-manager-redis-store';
+import { WinstonModule } from 'nest-winston';
+import { winstonConfig } from './config/logger/winston.config';
 
 @Module({
   imports: [
@@ -35,6 +37,7 @@ import * as redisStore from 'cache-manager-redis-store';
     }),
     ChatsModule,
     TranslationModule,
+    WinstonModule.forRoot(winstonConfig),
   ],
   controllers: [AppController],
   providers: [AppService],
