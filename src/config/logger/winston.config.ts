@@ -27,7 +27,7 @@ const printFormat = (info) =>
     info.message
   }`;
 
-export const winstonConfig = {
+export const winstonConfig = () => ({
   levels,
   format: winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
@@ -35,14 +35,14 @@ export const winstonConfig = {
   ),
   transports: [
     new winston.transports.Console({
-      level: process.env.NODE_ENV === 'production' ? 'info' : 'silly',
+      level: process.env.NODE_ENV === 'production' ? 'http' : 'silly',
       format: winston.format.combine(
         winston.format.colorize({ all: true }),
         winston.format.printf(printFormat),
       ),
     }),
     new winstonDaily(dailyOption('error')),
-    new winstonDaily(dailyOption('warn')),
-    new winstonDaily(dailyOption('info')),
+    // new winstonDaily(dailyOption('warn')),
+    // new winstonDaily(dailyOption('info')),
   ],
-};
+});

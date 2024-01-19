@@ -36,7 +36,7 @@ export class LoggingInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap(() => {
-        this.logger.info(resFormat(res.statusCode));
+        this.logger.http(resFormat(res.statusCode));
       }),
       catchError((e) => {
         if (!e.status || e.status >= 500) {
