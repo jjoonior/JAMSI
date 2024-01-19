@@ -10,6 +10,9 @@ import { TranslationModule } from './translation/translation.module';
 import * as redisStore from 'cache-manager-redis-store';
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './config/logger/winston.config';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { LoggingInterceptor } from './common/interceptor/logging.interceptor';
+import { CommonExceptionFilter } from './common/exceptionFilter/common.exceptionFilter';
 
 @Module({
   imports: [
@@ -37,9 +40,13 @@ import { winstonConfig } from './config/logger/winston.config';
     }),
     ChatsModule,
     TranslationModule,
-    WinstonModule.forRoot(winstonConfig),
+    WinstonModule.forRoot(winstonConfig()),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    { provide: APP_FILTER, useClass: CommonExceptionFilter },
+  ],
 })
 export class AppModule {}
