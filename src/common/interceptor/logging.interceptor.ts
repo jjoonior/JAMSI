@@ -24,10 +24,6 @@ export class LoggingInterceptor implements NestInterceptor {
     const route = req.originalUrl;
     const date = new Date();
 
-    // todo req 전문 찍자
-    const reqFormat = `[REQ] ${req.method} ${route}`;
-    this.logger.http(reqFormat);
-
     const resFormat = (statusCode) => {
       return `[RES] ${req.method} ${route} ${statusCode} ${
         new Date().getMilliseconds() - date.getMilliseconds()
